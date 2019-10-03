@@ -1,0 +1,147 @@
+---
+title: "ACST886 Assignment3Q1"
+author: "Chang,Liu"
+date: "01/10/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE,warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1(a)
+
+### (i)
+
+```{r}
+x <- c(55:58)
+x
+```
+
+#### life table
+
+```{r}
+qx_d <- c(0.001046,0.001199,0.001375,NA)
+l_x<-c()
+l_x[1]=100000
+for (j in 2:4) {
+  l_x[j]=l_x[j-1]*(1-qx_d[j-1])
+}
+junk<-cbind(x,qx_d,l_x)
+colnames(junk)<-c("age","qx_d","l_x")
+junk
+```
+
+#### Premium
+In this question we only have one Premium which is the purchase price at beginning of the first year
+```{r}
+Premium<-40250
+Premium
+```
+
+#### Expense 
+In this question the expense including annities, initial expenses and payment expenses.
+```{r}
+annuity<-15000
+annuity_paid<-c(15000,15000*(1+0.0192308),15000*(1+0.0192308)^2)
+init_expense<-40250*0.015+100
+maint_expense<-c(10,10*(1+0.05),10*(1+0.05)^2)
+E.maint_expense<-c()
+Exp.annuity<-c()
+for (j in 1:3) {
+  E.maint_expense[j]<-maint_expense[j]*(l_x[j+1]/l_x[1])
+  
+  Exp.annuity[j]<-annuity_paid[j]*(l_x[j+1]/l_x[1])
+}
+E.maint_expense
+Exp.annuity
+```
+#### Policy value
+
+```{r warning=FALSE}
+A57t2<-0.924607
+A56t3<-0.889132
+i_vb<-0.04
+pol_val<-c()
+Exppol_val<-c()
+v<-(1+i_vb)^(-1)
+d<-1-(1+i_vb)^(-1)
+a_1<-(v-A56t3)/d
+a_2<-(v-A57t2)/d
+pol_val[1]<-annuity*a_1
+pol_val[2]<-annuity_paid[2]*a_2
+pol_val[3]<-0
+for (j in 1:3) {
+  Exppol_val[j]<-pol_val[j]*l_x[j+1]/l_x[1]
+  
+}
+
+pol_val
+Exppol_val
+```
+#### Interest earned
+ 
+```{r}
+i<-0.08
+Exp_Int<-c()
+Exp_Int[1]<-(Premium-init_expense[1])*i
+for (j in 2:3) {
+  Exp_Int[j]<-Exppol_val[j-1]*i
+}
+
+Exp_Int
+```
+#### Profit signature
+
+```{r}
+Pro.sig<-c()
+Pro.sig[1]<-Premium-init_expense+Exp_Int[1]-Exppol_val[1]-E.maint_expense[1]-Exp.annuity[1]
+for (j in 2:3) {
+  Pro.sig[j]<-Exp_Int[j]-Exppol_val[j]+Exppol_val[j-1]-E.maint_expense[j]-Exp.annuity[j]
+}
+ Pro.sig
+```
+
+### (ii)
+
+#### Net expected profit
+```{r}
+disc.fact<-c()
+risk_disc<-0.12
+for (j in 1:3) {
+  disc.fact[j]<-(1+risk_disc)^(-(j-1))
+                    
+}
+Exp.profit<-sum(Pro.sig*disc.fact)
+Exp.profit
+```
+#### Profit margin
+```{r}
+Pro_margin<-Exp.profit/40250
+Pro_margin
+```
+
+## Question 1(b)
+```{r}
+f<-function(i){
+for (j in 1:3) {
+  disc.fact[j]<-(1+i)^(-(j-1))
+                    
+}
+  sum(Pro.sig*disc.fact)
+}
+i<-seq(0.01,1,0.01)
+npv<-c()
+
+for (j in 1:length(i)) {
+  a<-i[j]
+  npv[j]<-f(a)
+}
+plot(i,npv,type="l",xlab="interest rate",ylab="Net Present Value")
+```
+
+```{r}
+acd<-uniroot(f,c(0.2,0.8))
+acd$root
+```
+The reason is that from the graph we can see that the net present vale decreses as the interest rate increase.And the first cashflow has the biggest influence since we need to time it by v^(-1),while following one need to time smaller discount factor,thus we need a big interest rate to increase the influence.

@@ -1,0 +1,172 @@
+---
+title: "ACST886 Assignment3Q2"
+author: "Chang,Liu"
+date: "02/10/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Part a
+
+### Generate multiple decrement table
+```{r}
+x<-c(30:40)
+qx_d_ind<-c(0.00043,0.00042,0.00041,0.0004,0.00041,0.00042,0.00043,0.00045,0.00049,0.00053,NA)
+qx_w_ind<-c(0.250,0.200,0.175,0.150,0.150,0.150,0.150,0.150,0.150,1.000,NA)
+qx.d.dep<-c()
+qx.w.dep<-c()
+for (j in 1:11) {
+  qx.d.dep[j]<-qx_d_ind[j]*(1-0.5*qx_w_ind[j])
+  qx.w.dep[j]<-qx_w_ind[j]*(1-0.5*qx_d_ind[j])
+  }
+al.x <- c()
+ad.x <- c()
+ad.w <- c()
+al.x[1]<-100000
+for (j in 1:10) {
+  ad.x[j]<-al.x[j]*qx.d.dep[j]
+  ad.w[j]<-al.x[j]*qx.w.dep[j]
+  al.x[j+1]<-al.x[j]-ad.x[j]-ad.w[j]
+}
+ad.w[11]<-NA
+ad.x[11]<-NA
+junk<-cbind(x,qx_d_ind,qx_w_ind,qx.d.dep,qx.w.dep,al.x,ad.x,ad.w)
+colnames(junk)<-c("age","qx_d_ind","qx_w_ind","qx.d.dep","qx.w.dep","al.x","ad.x","ad.w")
+junk
+```
+
+### Unit fund
+```{r}
+Premium<-5000
+i_unit<-0.1
+Pbase<-c(0.45,rep(0.01,9))
+Asset<-0.003
+BSmargin<-0.005
+invsetPre<-c()
+Exp_invsetPre<-c()
+Exp_interest<-c()
+Value_unit<-c()
+for (j in 1:10) {
+  invsetPre[j]<-Premium*(1-Pbase[j])*(1-BSmargin)
+  Exp_invsetPre[j]<- invsetPre[j]*(al.x[j]/al.x[1])
+  }
+Exp_interest[1]<-Exp_invsetPre[1]*i_unit
+Value_unit[1]<-invsetPre[1]*(1+i_unit)*(1-Asset)
+Exp_unitvalue<-c()
+Exp_unitvalue[1]<-Value_unit[1]*(al.x[2]/al.x[1])
+for (j in 2:10) {
+  Value_unit[j]<-(invsetPre[j]+Value_unit[j-1])*(1+i_unit)*(1-Asset)
+  Exp_unitvalue[j]<-Value_unit[j]*(al.x[j+1]/al.x[1])
+  Exp_interest[j]<-(Exp_invsetPre[j]+Exp_unitvalue[j-1])*i_unit
+}
+Trans2non_unit<-c()
+Trans2non_unit[1]<-Exp_invsetPre[1]+Exp_interest[1]-Exp_unitvalue[1]
+for (j in 2:10) {
+  Trans2non_unit[j]<-Exp_invsetPre[j]+Exp_interest[j]+Exp_unitvalue[j-1]-Exp_unitvalue[j]
+}
+Trans2non_unit
+```
+
+### Non-unit fund
+```{r}
+Init_expense<-0.45
+maint_expense<-58
+i_f<-0.2
+i_nonunit<-0.08
+Pbasefee<-c()
+BSmarfee<-c()
+Expense<-c()
+Bft<-Value_unit
+Exp_Pbasefee<-c()
+Exp_BSmarfee<-c()
+Exp_Expense<-c()
+Exp_interest2<-c()
+S_bft<-c()
+D_bft<-c()
+Trans<-c()
+Pbasefee<-Premium*Pbase
+BSmarfee<-Premium*(1-Pbase)*BSmargin
+Expense[1]<-Init_expense*Premium+maint_expense
+  for (j in 2:10) {
+    Expense[j]<-maint_expense*(1+i_f)^(j-1)
+  }
+
+for (j in 1:10) {
+  Exp_Pbasefee[j]<-Pbasefee[j]*(al.x[j]/al.x[1])
+  Exp_BSmarfee[j]<-BSmarfee[j]*(al.x[j]/al.x[1])
+  Exp_Expense[j]<-Expense[j]*(al.x[j]/al.x[1])
+  Exp_interest2[j]<-(Exp_Pbasefee[j]+Exp_BSmarfee[j]-Exp_Expense[j])*i_nonunit
+  D_bft[j]<-Bft[j]*(ad.x[j]/al.x[1])
+  S_bft[j]<-Bft[j]*(ad.w[j]/al.x[1])
+}
+Trans<-Exp_Pbasefee+Exp_BSmarfee-Exp_Expense+Exp_interest2+Trans2non_unit-D_bft-S_bft
+Trans
+```
+
+### profit signature and the expected present value of transfer at 12.5% p.a
+```{r}
+i_risk<-0.125
+prof.sig<-Trans
+prof.sig
+  disc.fact<-c()
+for (j in 1:10) {
+  disc.fact[j]<-(1+i_risk)^(-j)
+  
+}
+Exp.PV<-sum(prof.sig*disc.fact)
+Exp.PV
+```
+
+## Part b
+
+```{r}
+policy_val<-Value_unit
+f<-function(x){
+  Value_unit[9]<-x
+  for (j in 9:10) {
+  Exp_unitvalue[j]<-Value_unit[j]*(al.x[j+1]/al.x[1])
+  Exp_interest[j]<-(Exp_invsetPre[j]+Exp_unitvalue[j-1])*i_unit
+}
+  for (j in 9:10) {
+  Trans2non_unit[j]<-Exp_invsetPre[j]+Exp_interest[j]+Exp_unitvalue[j-1]-Exp_unitvalue[j]
+}
+  
+Trans<-Exp_Pbasefee+Exp_BSmarfee-Exp_Expense+Exp_interest2+Trans2non_unit-D_bft-S_bft  
+Trans[10]  
+}
+y<-seq(0.001,1,0.001)
+transfer_10<-c()
+for (j in 1:1000) {
+  a<-y[j]
+  transfer_10[j]<-f(a)
+}
+plot(y,transfer_10,type="l",xlab="policy value in year 9",ylab="transfer in final year")
+```
+We can see from the plot that the policy value required is between 66000 and 68000, then we use uniroot function to determine the exact value
+```{r}
+abc<-uniroot(f,c(66000,68000))
+abc$root
+```
+
+## Part c
+```{r}
+Value_unit[9]<-67319.02
+ for (j in 9:10) {
+  Exp_unitvalue[j]<-Value_unit[j]*(al.x[j+1]/al.x[1])
+  Exp_interest[j]<-(Exp_invsetPre[j]+Exp_unitvalue[j-1])*i_unit
+}
+  for (j in 9:10) {
+  Trans2non_unit[j]<-Exp_invsetPre[j]+Exp_interest[j]+Exp_unitvalue[j-1]-Exp_unitvalue[j]
+}
+  
+Trans<-Exp_Pbasefee+Exp_BSmarfee-Exp_Expense+Exp_interest2+Trans2non_unit-D_bft-S_bft  
+Exp.PV2<-sum(Trans*disc.fact)
+Exp.PV2
+Exp.PV-Exp.PV2
+```
+
+the expected present value of transfer at 12.5% p.a. decreased as a result of the zeroisation,
+because the transfer to non-unit fund is decreased as a result of the samller difference between the policy value in year 8 and that in year 9

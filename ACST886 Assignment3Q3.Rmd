@@ -1,0 +1,152 @@
+---
+title: "ACST886 Assignment3Q3"
+author: "Chang,Liu"
+date: "02/10/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Yield on transfer
+
+```{r}
+transfer<-c(-38.7603750,23.7783570,21.2621972,18.7990231,16.3686478,13.4784000,10.2381118,6.738058,3.0520639,-0.7596495)
+disc.fact<-c()
+g<-function(i){
+for (j in 1:10) {
+  disc.fact[j]<-(1+i)^(-j)}
+  sum(transfer*disc.fact)
+}
+acd<-uniroot(g,c(0.001,1))
+acd$root
+```
+
+## Recalculation
+### Generate multiple decrement table
+```{r}
+x<-c(30:40)
+qx_d_ind<-c(0.00043,0.00042,0.00041,0.0004,0.00041,0.00042,0.00043,0.00045,0.00049,0.00053,NA)
+qx_w_ind<-c(0.250,0.200,0.175,0.150,0.150,0.150,0.150,0.150,0.150,1.000,NA)
+qx.d.dep<-c()
+qx.w.dep<-c()
+for (j in 1:11) {
+  qx.d.dep[j]<-qx_d_ind[j]*(1-0.5*qx_w_ind[j])
+  qx.w.dep[j]<-qx_w_ind[j]*(1-0.5*qx_d_ind[j])
+  }
+al.x <- c()
+ad.x <- c()
+ad.w <- c()
+al.x[1]<-100000
+for (j in 1:10) {
+  ad.x[j]<-al.x[j]*qx.d.dep[j]
+  ad.w[j]<-al.x[j]*qx.w.dep[j]
+  al.x[j+1]<-al.x[j]-ad.x[j]-ad.w[j]
+}
+ad.w[11]<-NA
+ad.x[11]<-NA
+junk<-cbind(x,qx_d_ind,qx_w_ind,qx.d.dep,qx.w.dep,al.x,ad.x,ad.w)
+colnames(junk)<-c("age","qx_d_ind","qx_w_ind","qx.d.dep","qx.w.dep","al.x","ad.x","ad.w")
+junk
+```
+
+### Unit fund
+```{r}
+SI<-20000
+Premium<-5000
+i_unit<-0.1
+Pbase<-c(0.45,rep(0.01,9))
+Asset<-0.003
+BSmargin<-0.005
+invsetPre<-c()
+Exp_invsetPre<-c()
+Exp_interest<-c()
+Value_unit<-c()
+Insurance_charge<-c()
+for (j in 1:10) {
+  
+  Insurance_charge[j]<-1.2*qx_d_ind[j]*SI
+  invsetPre[j]<-(Premium*(1-Pbase[j])-Insurance_charge[j])*(1-BSmargin)
+  Exp_invsetPre[j]<- invsetPre[j]*(al.x[j]/al.x[1])
+  }
+Exp_interest[1]<-Exp_invsetPre[1]*i_unit
+Value_unit[1]<-invsetPre[1]*(1+i_unit)*(1-Asset)
+Exp_unitvalue<-c()
+Exp_unitvalue[1]<-Value_unit[1]*(al.x[2]/al.x[1])
+for (j in 2:10) {
+  Value_unit[j]<-(invsetPre[j]+Value_unit[j-1])*(1+i_unit)*(1-Asset)
+  Exp_unitvalue[j]<-Value_unit[j]*(al.x[j+1]/al.x[1])
+  Exp_interest[j]<-(Exp_invsetPre[j]+Exp_unitvalue[j-1])*i_unit
+}
+Trans2non_unit<-c()
+Trans2non_unit[1]<-Exp_invsetPre[1]+Exp_interest[1]-Exp_unitvalue[1]
+for (j in 2:10) {
+  Trans2non_unit[j]<-Exp_invsetPre[j]+Exp_interest[j]+Exp_unitvalue[j-1]-Exp_unitvalue[j]
+}
+Trans2non_unit
+```
+
+### Non-unit fund
+```{r}
+
+ExpInsurance_charge<-c()
+Init_expense<-0.45
+maint_expense<-75
+i_f<-0.25
+i_nonunit<-0.08
+Pbasefee<-c()
+BSmarfee<-c()
+Expense<-c()
+Bft<-Value_unit
+Exp_Pbasefee<-c()
+Exp_BSmarfee<-c()
+Exp_Expense<-c()
+Exp_interest2<-c()
+S_bft<-c()
+D_bft<-c()
+Trans<-c()
+Pbasefee<-Premium*Pbase
+BSmarfee<-Premium*(1-Pbase)*BSmargin
+Expense[1]<-Init_expense*Premium+maint_expense
+  for (j in 2:10) {
+    Expense[j]<-maint_expense*(1+i_f)^(j-1)
+  }
+
+for (j in 1:10) {
+
+  ExpInsurance_charge[j]<- Insurance_charge[j]*(al.x[j]/al.x[1])
+  Exp_Pbasefee[j]<-Pbasefee[j]*(al.x[j]/al.x[1])
+  Exp_BSmarfee[j]<-BSmarfee[j]*(al.x[j]/al.x[1])
+  Exp_Expense[j]<-Expense[j]*(al.x[j]/al.x[1])
+  Exp_interest2[j]<-(Exp_Pbasefee[j]+Exp_BSmarfee[j]-Exp_Expense[j]+ExpInsurance_charge[j])*i_nonunit
+  D_bft[j]<-(SI+Bft[j])*(ad.x[j]/al.x[1])
+  S_bft[j]<-Bft[j]*(ad.w[j]/al.x[1])
+}
+Trans<-Exp_Pbasefee+Exp_BSmarfee-Exp_Expense+Exp_interest2+Trans2non_unit-D_bft-S_bft+ExpInsurance_charge
+Exp_Pbasefee
+Exp_BSmarfee
+ExpInsurance_charge
+Exp_Expense
+Exp_interest2
+Trans2non_unit
+D_bft
+S_bft
+
+
+Trans
+```
+
+### profit signature and the expected present value of transfer at 12.5% p.a
+```{r}
+i_risk<-0.125
+prof.sig<-Trans
+prof.sig
+  disc.fact<-c()
+for (j in 1:10) {
+  disc.fact[j]<-(1+i_risk)^(-j)
+  
+}
+Exp.PV<-sum(prof.sig*disc.fact)
+Exp.PV
+```
